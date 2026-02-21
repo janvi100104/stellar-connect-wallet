@@ -1,42 +1,17 @@
 
-import React, {useState} from 'react'
-import { checkConnection,retrievePublicKey,getBalance } from './Freighter'
+import React from 'react';
+
 const Header = () => {
-    const [connected , setConnected] = useState(false);
-    const [publicKey , setPublicKey] = useState('');
-    const [balance , setBalance] = useState('0');
-    const connectWallet = async () => {
-        try{
-            const allowed = await checkConnection();
-            if(!allowed) {
-                alert('Please allow access to your wallet');
-                return;
-            }
-        const key = await retrievePublicKey();
-        const bal = await getBalance();
-        setPublicKey(key);
-        setBalance(Number(bal).toFixed(2));
-        setConnected(true);
-    }catch (error) {
-        console.error('Error connecting to wallet:', error);
-    }
-};
   return (
-    <div>
-      <div>Stellar Wallet Header</div>
-      <div>
-        {publicKey && (
-            <>
-            <div>{`${publicKey.slice(0, 4)}...${publicKey.slice(-4)}`}</div>
-      <div>
-        balance: {balance} XLM
+    <header className="bg-gray-800 text-white p-4">
+      <div className="container mx-auto flex justify-between items-center">
+        <h1 className="text-xl font-bold">Stellar Wallet Connect</h1>
+        <div className="flex items-center space-x-4">
+          <span className="text-cyan-400">Freighter Wallet</span>
+        </div>
       </div>
-      </>
-        )}
-        <button onClick={connectWallet} disabled={connected}>{connected ? 'Connected' : 'Connect Wallet'}</button>
-      </div>
-    </div>
-  )
+    </header>
+  );
 };
 
-export default Header
+export default Header;

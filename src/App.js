@@ -1,10 +1,9 @@
-import logo from './logo.svg';
 import './App.css';
-import Header from './components/Header';
+import FreighterUI from './components/FreighterUI';
 function App() {
   return (
    <div className="App">
-    <Header/>
+    <FreighterUI />
    </div>
   );
 }
