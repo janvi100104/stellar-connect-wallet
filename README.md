@@ -1,70 +1,89 @@
-# Getting Started with Create React App
+# TrustLance - Freelance Escrow Platform
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+TrustLance is a blockchain-based escrow platform built on Stellar that enables secure freelance payments with lower fees and instant settlements.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+- Wallet connection with Freighter
+- XLM balance display
+- Simple escrow creation
+- Funding and payment release
+- Multi-wallet support
+- Real-time status tracking
 
-### `npm start`
+## Tech Stack
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- Next.js 14 with App Router
+- TypeScript
+- Tailwind CSS
+- shadcn/ui components
+- @stellar/stellar-sdk
+- @stellar/freighter-api
+- @creit.tech/stellar-wallets-kit
+- Zustand for state management
+- Sonner for notifications
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Installation
 
-### `npm test`
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd stellar-connect-wallet
+   ```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+2. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+   ```
 
-### `npm run build`
+3. Install dependencies:
+   ```bash
+   pnpm install
+   ```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+4. Set up environment variables:
+   ```bash
+   cp .env.local.example .env.local
+   ```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+5. Run the development server:
+   ```bash
+   pnpm dev
+   ```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+6. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### `npm run eject`
+## Setup Instructions
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+1. Install the [Freighter wallet extension](https://chrome.google.com/webstore/detail/freighter/xexzokzghmdukkyscdfjteluazmyijvw)
+2. Create a testnet account using the [Stellar Laboratory](https://laboratory.stellar.org/) or [Stellar Quest faucet](https://dashboard.stellar.org/)
+3. Fund your testnet account with testnet lumens using the faucet
+4. Connect your wallet to the application
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Project Structure
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+- `frontend/app/page.tsx` - Main landing page
+- `frontend/components/wallet/` - Wallet-related components
+- `frontend/components/escrow/` - Escrow functionality components
+- `frontend/store/useWallet.ts` - Wallet state management
+- `frontend/lib/utils.ts` - Utility functions
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## Level 1 Features (White Belt)
 
-## Learn More
+- ✅ Wallet connection with Freighter
+- ✅ Display wallet address (truncated)
+- ✅ Show XLM balance
+- ✅ Simple payment form
+- ✅ Create simple escrow
+- ✅ Fund escrow functionality
+- ✅ Release payment functionality
+- ✅ Success/error notifications
+- ✅ Mobile responsive design
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## Contributing
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
-### Code Splitting
+## License
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+MIT
