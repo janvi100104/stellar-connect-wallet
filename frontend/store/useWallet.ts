@@ -1,93 +1,92 @@
 import { create } from 'zustand';
-import { Keypair, Networks } from '@stellar/stellar-sdk';
-import { isFreighterAvailable, checkFreighterConnection, validateNetwork, getInstallationInstructions } from '@/lib/stellar/wallet';
+import { 
+  connectToFreighter, 
+  disconnectFromFreighter, 
+  checkFreighterConnection, 
+  validateNetwork,
+  isFreighterAvailable,
+} from '@/lib/stellar/wallet';
 
 interface WalletState {
   publicKey: string | null;
   balance: number | null;
   isConnected: boolean;
   connecting: boolean;
+  loading: boolean;
+  network: string | null;
+  error: string | null;
   connectWallet: () => Promise<void>;
-  disconnectWallet: () => void;
+  disconnectWallet: () => Promise<void>;
   fetchBalance: () => Promise<void>;
-}
-
-declare global {
-  interface Window {
-    freighter: any;
-  }
+  clearError: () => void;
 }
 
 // Get the horizon URL from environment or default to testnet
 const HORIZON_URL = process.env.NEXT_PUBLIC_HORIZON_URL || 'https://horizon-testnet.stellar.org';
+const EXPECTED_NETWORK = process.env.NEXT_PUBLIC_STELLAR_NETWORK || 'TESTNET';
 
 export const useWallet = create<WalletState>((set, get) => ({
   publicKey: null,
   balance: null,
   isConnected: false,
   connecting: false,
+  loading: false,
+  network: null,
+  error: null,
+
+  clearError: () => set({ error: null }),
 
   connectWallet: async () => {
-    set({ connecting: true });
-    
+    set({ connecting: true, error: null });
+
     try {
       // Check if Freighter wallet is installed
       if (!isFreighterAvailable()) {
         const error = new Error('Freighter wallet not installed. Please install the Freighter browser extension from https://www.freighter.app/');
         (error as any).code = 'FREIGHTER_NOT_INSTALLED';
-        (error as any).debugInfo = {
-          windowExists: typeof window !== 'undefined',
-          freighterType: typeof window?.freighter
-        };
         throw error;
       }
 
-      // Check if wallet is connected
-      const isConnected = await checkFreighterConnection();
-      
-      // If not connected, attempt to connect
-      if (!isConnected) {
-        const result = await window.freighter!.connect();
-        
-        if (!result) {
-          const error = new Error('Failed to connect to Freighter wallet. Please make sure it is unlocked and properly configured.');
-          (error as any).code = 'FREIGHTER_CONNECT_FAILED';
-          throw error;
-        }
-      }
+      // Connect to Freighter and get public key
+      const { publicKey, name } = await connectToFreighter();
 
-      // Get the public key
-      const publicKeyResult = await window.freighter!.getPublicKey();
-      const publicKey = typeof publicKeyResult === 'string' ? publicKeyResult : publicKeyResult?.publicKey;
-      
       if (!publicKey) {
         const error = new Error('Failed to retrieve public key from wallet.');
         (error as any).code = 'FREIGHTER_NO_PUBLIC_KEY';
         throw error;
       }
-      
-      // Check network (optional - for validation)
+
+      // Validate network (shows warning if needed)
       const networkValidation = await validateNetwork();
-      
-      if (!networkValidation.isValid && networkValidation.currentNetwork) {
-        console.warn(`Wallet connected to ${networkValidation.currentNetwork}, but expected ${networkValidation.expectedNetwork}`);
+
+      if (networkValidation.warning) {
+        console.warn(networkValidation.warning);
       }
-      
-      set({ publicKey, isConnected: true });
-      
+
+      set({ 
+        publicKey, 
+        isConnected: true,
+        network: EXPECTED_NETWORK,
+        error: null
+      });
+
       // Fetch balance after connecting
       await get().fetchBalance();
+      
     } catch (error: any) {
       // Only log errors in development, not in production
       if (process.env.NODE_ENV !== 'production') {
         console.error('Error connecting wallet:', error);
         if (error.code) console.error('Error code:', error.code);
-        if (error.debugInfo) console.error('Error debug info:', error.debugInfo);
       }
-      
+
       // Reset connection state on error
-      set({ publicKey: null, isConnected: false });
-      
+      set({ 
+        publicKey: null, 
+        isConnected: false,
+        error: error.message || 'Failed to connect wallet'
+      });
+
       // Re-throw with proper error code for UI handling
       if (error.code) {
         throw error;
@@ -103,44 +102,68 @@ export const useWallet = create<WalletState>((set, get) => ({
 
   disconnectWallet: async () => {
     try {
-      // Check if Freighter is available and connected
-      const isConnected = await checkFreighterConnection();
-      if (isConnected && window.freighter) {
-        await window.freighter.disconnect();
-      }
+      await disconnectFromFreighter();
     } catch (error) {
       console.error('Error disconnecting wallet:', error);
       // Continue with local state reset even if disconnect fails
     } finally {
-      // Always reset local state
-      set({ 
-        publicKey: null, 
-        balance: null, 
-        isConnected: false 
+      // Always reset local state completely
+      set({
+        publicKey: null,
+        balance: null,
+        isConnected: false,
+        connecting: false,
+        loading: false,
+        network: null,
+        error: null
       });
     }
   },
 
   fetchBalance: async () => {
-    if (!get().publicKey) return;
+    const publicKey = get().publicKey;
+    if (!publicKey) {
+      console.warn('Cannot fetch balance: no public key available');
+      return;
+    }
+
+    set({ loading: true });
 
     try {
-      // Using direct fetch API instead of Server for client-side compatibility
-      const response = await fetch(`${HORIZON_URL}/accounts/${get().publicKey}`);
-      const data = await response.json();
+      const response = await fetch(`${HORIZON_URL}/accounts/${publicKey}`);
       
+      if (!response.ok) {
+        if (response.status === 404) {
+          // Account doesn't exist yet - needs to be funded
+          set({ balance: 0, error: null, loading: false });
+          return;
+        }
+        throw new Error(`Failed to fetch account: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+
       if (data && data.balances) {
-        const xlmBalance = data.balances.find((balance: any) => 
+        const xlmBalance = data.balances.find((balance: any) =>
           balance.asset_type === 'native'
         );
 
         if (xlmBalance) {
-          set({ balance: parseFloat(xlmBalance.balance) });
+          set({ balance: parseFloat(xlmBalance.balance), error: null });
+        } else {
+          set({ balance: 0, error: null });
         }
+      } else {
+        set({ balance: null });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching balance:', error);
-      set({ balance: null });
+      set({ 
+        balance: null,
+        error: `Failed to fetch balance: ${error.message}`
+      });
+    } finally {
+      set({ loading: false });
     }
   },
 }));

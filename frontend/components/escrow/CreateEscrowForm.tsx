@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useWallet } from '@/store/useWallet';
 import { toast } from 'sonner';
+import { isValidStellarAddress, isValidStellarAmount, sanitizeInput } from '@/lib/utils';
 
 export function CreateEscrowForm() {
   const { publicKey, isConnected } = useWallet();
@@ -14,36 +15,34 @@ export function CreateEscrowForm() {
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const isValidStellarAddress = (address: string): boolean => {
-    // Basic validation for Stellar address format (starts with G and has 56 characters)
-    const stellarAddressRegex = /^G[A-Z2-7]{55}$/;
-    return stellarAddressRegex.test(address);
-  };
-
   const createEscrow = async () => {
     if (!isConnected || !publicKey) {
       toast.error('Please connect your wallet first');
       return;
     }
 
-    if (!projectTitle.trim()) {
+    // Sanitize inputs
+    const sanitizedTitle = sanitizeInput(projectTitle);
+    const sanitizedAddress = sanitizeInput(freelancerAddress);
+    const sanitizedAmount = sanitizeInput(amount);
+
+    if (!sanitizedTitle.trim()) {
       toast.error('Please enter a project title');
       return;
     }
 
-    if (!freelancerAddress.trim()) {
+    if (!sanitizedAddress.trim()) {
       toast.error('Please enter freelancer address');
       return;
     }
 
-    if (!isValidStellarAddress(freelancerAddress)) {
-      toast.error('Invalid Stellar address format');
+    if (!isValidStellarAddress(sanitizedAddress)) {
+      toast.error('Invalid Stellar address format. Address must start with G and be 56 characters.');
       return;
     }
 
-    const parsedAmount = parseFloat(amount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      toast.error('Please enter a valid amount');
+    if (!isValidStellarAmount(sanitizedAmount)) {
+      toast.error('Please enter a valid amount (positive number with up to 7 decimal places)');
       return;
     }
 
@@ -53,8 +52,8 @@ export function CreateEscrowForm() {
       // Simulate creating an escrow
       // In a real implementation, this would deploy a smart contract
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      toast.success(`Escrow created successfully! Project: "${projectTitle}"`);
+
+      toast.success(`Escrow created successfully! Project: "${sanitizedTitle}"`);
       setProjectTitle('');
       setFreelancerAddress('');
       setAmount('');
@@ -78,7 +77,7 @@ export function CreateEscrowForm() {
           disabled={!isConnected || loading}
         />
       </div>
-      
+
       <div className="space-y-2">
         <Label htmlFor="freelancer-address">Freelancer Address</Label>
         <Input
@@ -89,7 +88,7 @@ export function CreateEscrowForm() {
           disabled={!isConnected || loading}
         />
       </div>
-      
+
       <div className="space-y-2">
         <Label htmlFor="amount">Amount (XLM)</Label>
         <Input
@@ -103,9 +102,9 @@ export function CreateEscrowForm() {
           step="0.0000001"
         />
       </div>
-      
-      <Button 
-        onClick={createEscrow} 
+
+      <Button
+        onClick={createEscrow}
         disabled={!isConnected || loading || !projectTitle || !freelancerAddress || !amount}
         className="w-full"
       >

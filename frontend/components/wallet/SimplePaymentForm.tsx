@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useWallet } from '@/store/useWallet';
 import { toast } from 'sonner';
+import { isValidStellarAddress, isValidStellarAmount, sanitizeInput } from '@/lib/utils';
 
 export function SimplePaymentForm() {
   const { publicKey, isConnected } = useWallet();
@@ -13,31 +14,28 @@ export function SimplePaymentForm() {
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const isValidStellarAddress = (address: string): boolean => {
-    // Basic validation for Stellar address format (starts with G and has 56 characters)
-    const stellarAddressRegex = /^G[A-Z2-7]{55}$/;
-    return stellarAddressRegex.test(address);
-  };
-
   const sendPayment = async () => {
     if (!isConnected || !publicKey) {
       toast.error('Please connect your wallet first');
       return;
     }
 
-    if (!recipientAddress.trim()) {
+    // Sanitize inputs
+    const sanitizedAddress = sanitizeInput(recipientAddress);
+    const sanitizedAmount = sanitizeInput(amount);
+
+    if (!sanitizedAddress.trim()) {
       toast.error('Please enter recipient address');
       return;
     }
 
-    if (!isValidStellarAddress(recipientAddress)) {
-      toast.error('Invalid Stellar address format');
+    if (!isValidStellarAddress(sanitizedAddress)) {
+      toast.error('Invalid Stellar address format. Address must start with G and be 56 characters.');
       return;
     }
 
-    const parsedAmount = parseFloat(amount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      toast.error('Please enter a valid amount');
+    if (!isValidStellarAmount(sanitizedAmount)) {
+      toast.error('Please enter a valid amount (positive number with up to 7 decimal places)');
       return;
     }
 
@@ -47,11 +45,11 @@ export function SimplePaymentForm() {
       // Using Stellar SDK to create and submit transaction
       // In a real implementation, this would involve creating a transaction and signing it with the wallet
       // For this demo, we'll simulate the transaction
-      
+
       // Simulate transaction delay
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      toast.success(`Successfully sent ${amount} XLM to ${recipientAddress}`);
+
+      toast.success(`Successfully sent ${sanitizedAmount} XLM to ${sanitizedAddress.substring(0, 8)}...`);
       setRecipientAddress('');
       setAmount('');
     } catch (error: any) {
@@ -74,7 +72,7 @@ export function SimplePaymentForm() {
           disabled={!isConnected || loading}
         />
       </div>
-      
+
       <div className="space-y-2">
         <Label htmlFor="amount">Amount (XLM)</Label>
         <Input
@@ -88,9 +86,9 @@ export function SimplePaymentForm() {
           step="0.0000001"
         />
       </div>
-      
-      <Button 
-        onClick={sendPayment} 
+
+      <Button
+        onClick={sendPayment}
         disabled={!isConnected || loading || !recipientAddress || !amount}
         className="w-full"
       >
