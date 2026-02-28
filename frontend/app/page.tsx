@@ -8,9 +8,9 @@ import { EscrowCard } from '@/components/escrow/EscrowCard';
 import { Toaster } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
-// Sample escrow data for demonstration
+// Sample escrow data for demonstration with stable ID
 const sampleEscrow = {
-  id: 'ESCROW_' + Date.now(),
+  id: 'ESCROW_DEMO_001',
   title: 'Website Redesign',
   client: 'GBDZTQPCQXBV7IVJOGD57T3JYQFKVDUEROTDNQD5J4JSPJXQIKMC542F',
   freelancer: 'GAJKTV5UXWLGCJLC5ZHQQW5IJZJUCUM2DKCSLL34NPPYUDKPB3JX44QP',
@@ -18,7 +18,7 @@ const sampleEscrow = {
   currency: 'XLM' as const,
   status: 'created' as const,
   contractAddress: 'CA7DLZUPFH6KD4D5LK4YWQABNAEAYZ77XX5ADV7HEMWPK6NZY7IE765R',
-  createdAt: new Date(),
+  createdAt: new Date('2024-01-01'),
 };
 
 export default function Page() {
@@ -33,7 +33,7 @@ export default function Page() {
             Secure freelance payments on Stellar blockchain. Get paid safely, every time.
           </p>
         </header>
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Wallet Info */}
           <div className="lg:col-span-1 space-y-6">
@@ -48,10 +48,10 @@ export default function Page() {
                 </div>
               </CardContent>
             </Card>
-            
+
             <BalanceCard />
           </div>
-          
+
           {/* Middle Column - Escrow Creation */}
           <div className="lg:col-span-1 space-y-6">
             <Card>
@@ -63,7 +63,7 @@ export default function Page() {
                 <CreateEscrowForm />
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader>
                 <CardTitle>About TrustLance</CardTitle>
@@ -91,7 +91,7 @@ export default function Page() {
               </CardContent>
             </Card>
           </div>
-          
+
           {/* Right Column - Escrow Details */}
           <div className="lg:col-span-1 space-y-6">
             <Card>
@@ -103,7 +103,7 @@ export default function Page() {
                 <EscrowCard escrow={sampleEscrow} />
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader>
                 <CardTitle>Quick Actions</CardTitle>
@@ -116,7 +116,7 @@ export default function Page() {
           </div>
         </div>
       </div>
-      
+
       <Toaster position="top-right" />
     </div>
   );
