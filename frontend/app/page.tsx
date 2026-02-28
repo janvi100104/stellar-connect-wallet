@@ -4,18 +4,20 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { WalletButton } from '@/components/wallet/WalletButton';
-import { 
-  ArrowRight, 
-  Check, 
-  Clock, 
-  DollarSign, 
-  Globe, 
-  LayoutDashboard, 
-  Lock, 
-  Rocket, 
-  Shield, 
-  Sparkles, 
-  TrendingUp, 
+import { useWallet } from '@/store/useWallet';
+import Link from 'next/link';
+import {
+  ArrowRight,
+  Check,
+  Clock,
+  DollarSign,
+  Globe,
+  LayoutDashboard,
+  Lock,
+  Rocket,
+  Shield,
+  Sparkles,
+  TrendingUp,
   Users,
   Zap,
   ChevronDown,
@@ -81,6 +83,7 @@ const blobAnimation = `
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
+  const { isConnected } = useWallet();
 
   const features = [
     {
@@ -308,21 +311,45 @@ export default function LandingPage() {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
-              <Button 
-                size="lg" 
-                className="bg-white text-blue-600 hover:bg-blue-50 text-lg px-8 py-6 h-auto rounded-xl shadow-2xl hover:shadow-white/20 transition-all hover:scale-105"
-              >
-                <Rocket className="mr-2 h-5 w-5" />
-                Connect Wallet - Free
-              </Button>
-              <Button 
-                size="lg" 
-                variant="outline" 
-                className="bg-white/10 text-white border-white/30 hover:bg-white/20 text-lg px-8 py-6 h-auto rounded-xl backdrop-blur-sm"
-              >
-                <ExternalLink className="mr-2 h-5 w-5" />
-                View Demo
-              </Button>
+              {isConnected ? (
+                <>
+                  <Link href="/dashboard">
+                    <Button
+                      size="lg"
+                      className="bg-white text-blue-600 hover:bg-blue-50 text-lg px-8 py-6 h-auto rounded-xl shadow-2xl hover:shadow-white/20 transition-all hover:scale-105"
+                    >
+                      <LayoutDashboard className="mr-2 h-5 w-5" />
+                      Go to Dashboard
+                    </Button>
+                  </Link>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="bg-white/10 text-white border-white/30 hover:bg-white/20 text-lg px-8 py-6 h-auto rounded-xl backdrop-blur-sm"
+                  >
+                    <ExternalLink className="mr-2 h-5 w-5" />
+                    View Demo
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    size="lg"
+                    className="bg-white text-blue-600 hover:bg-blue-50 text-lg px-8 py-6 h-auto rounded-xl shadow-2xl hover:shadow-white/20 transition-all hover:scale-105"
+                  >
+                    <Rocket className="mr-2 h-5 w-5" />
+                    Connect Wallet - Free
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="bg-white/10 text-white border-white/30 hover:bg-white/20 text-lg px-8 py-6 h-auto rounded-xl backdrop-blur-sm"
+                  >
+                    <ExternalLink className="mr-2 h-5 w-5" />
+                    View Demo
+                  </Button>
+                </>
+              )}
             </div>
 
             {/* Trust Indicators */}

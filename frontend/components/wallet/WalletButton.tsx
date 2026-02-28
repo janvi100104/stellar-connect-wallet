@@ -3,16 +3,17 @@
 import { Button } from '@/components/ui/button';
 import { useWallet } from '@/store/useWallet';
 import { truncateAddress } from '@/lib/utils';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, LayoutDashboard } from 'lucide-react';
 import { toast } from 'sonner';
+import Link from 'next/link';
 
-export function WalletButton() {
+export function WalletButton({ variant = 'default' }: { variant?: 'default' | 'nav' }) {
   const { publicKey, isConnected, connecting, error, connectWallet, disconnectWallet, clearError } = useWallet();
 
   const handleWalletAction = async () => {
     // Clear any previous errors
     clearError();
-    
+
     try {
       if (isConnected) {
         await disconnectWallet();
@@ -89,15 +90,39 @@ export function WalletButton() {
   if (isConnected && publicKey) {
     return (
       <div className="flex items-center gap-2">
-        <span className="text-sm font-medium bg-green-100 text-green-800 px-3 py-1 rounded-full">
-          Connected
-        </span>
-        <span className="text-sm font-mono bg-gray-100 px-3 py-1 rounded-md" title={publicKey}>
-          {truncateAddress(publicKey)}
-        </span>
-        <Button onClick={disconnectWallet} variant="outline" size="sm">
-          Disconnect
-        </Button>
+        {variant === 'nav' ? (
+          <>
+            <Link href="/dashboard">
+              <Button variant="ghost" size="sm" className="gap-2">
+                <LayoutDashboard className="w-4 h-4" />
+                Dashboard
+              </Button>
+            </Link>
+            <span className="text-sm font-mono bg-gray-100 px-3 py-1 rounded-md" title={publicKey}>
+              {truncateAddress(publicKey)}
+            </span>
+            <Button onClick={disconnectWallet} variant="outline" size="sm">
+              Disconnect
+            </Button>
+          </>
+        ) : (
+          <>
+            <span className="text-sm font-medium bg-green-100 text-green-800 px-3 py-1 rounded-full">
+              Connected
+            </span>
+            <span className="text-sm font-mono bg-gray-100 px-3 py-1 rounded-md" title={publicKey}>
+              {truncateAddress(publicKey)}
+            </span>
+            <Link href="/dashboard">
+              <Button variant="outline" size="sm">
+                Dashboard
+              </Button>
+            </Link>
+            <Button onClick={disconnectWallet} variant="outline" size="sm">
+              Disconnect
+            </Button>
+          </>
+        )}
       </div>
     );
   }

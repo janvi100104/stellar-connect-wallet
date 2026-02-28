@@ -5,15 +5,22 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useWallet } from '@/store/useWallet';
+import { useEscrowStore } from '@/store/useEscrowStore';
 import { toast } from 'sonner';
 import { isValidStellarAddress, isValidStellarAmount, sanitizeInput } from '@/lib/utils';
+import { initializeEscrow, xlmToStroops } from '@/lib/stellar/contract';
+import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
+import Link from 'next/link';
 
 export function CreateEscrowForm() {
   const { publicKey, isConnected } = useWallet();
+  const { addEscrow } = useEscrowStore();
   const [projectTitle, setProjectTitle] = useState('');
   const [freelancerAddress, setFreelancerAddress] = useState('');
   const [amount, setAmount] = useState('');
+  const [deadline, setDeadline] = useState('7'); // Default 7 days
   const [loading, setLoading] = useState(false);
+  const [escrowId, setEscrowId] = useState<string | null>(null);
 
   const createEscrow = async () => {
     if (!isConnected || !publicKey) {
@@ -25,6 +32,7 @@ export function CreateEscrowForm() {
     const sanitizedTitle = sanitizeInput(projectTitle);
     const sanitizedAddress = sanitizeInput(freelancerAddress);
     const sanitizedAmount = sanitizeInput(amount);
+    const deadlineDays = parseInt(deadline);
 
     if (!sanitizedTitle.trim()) {
       toast.error('Please enter a project title');
@@ -46,20 +54,134 @@ export function CreateEscrowForm() {
       return;
     }
 
+    if (isNaN(deadlineDays) || deadlineDays < 1) {
+      toast.error('Deadline must be at least 1 day');
+      return;
+    }
+
     setLoading(true);
+    setEscrowId(null);
 
     try {
-      // Simulate creating an escrow
-      // In a real implementation, this would deploy a smart contract
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Calculate deadline timestamp
+      const deadlineDate = new Date();
+      deadlineDate.setDate(deadlineDate.getDate() + deadlineDays);
+      
+      // Convert amount to stroops
+      const amountInStroops = xlmToStroops(parseFloat(sanitizedAmount));
 
-      toast.success(`Escrow created successfully! Project: "${sanitizedTitle}"`);
-      setProjectTitle('');
-      setFreelancerAddress('');
-      setAmount('');
+      // Try to create escrow with contract
+      const result = await initializeEscrow({
+        freelancerAddress: sanitizedAddress,
+        amount: amountInStroops,
+        deadline: BigInt(Math.floor(deadlineDate.getTime() / 1000)),
+        metadata: sanitizedTitle,
+      });
+
+      // Generate escrow ID
+      const newEscrowId = result.success && result.result 
+        ? result.result.toString() 
+        : 'ESC-' + Date.now().toString().slice(-6);
+
+      if (result.success) {
+        setEscrowId(newEscrowId);
+        
+        // Store escrow in Zustand
+        addEscrow({
+          id: newEscrowId,
+          title: sanitizedTitle,
+          client: publicKey,
+          freelancer: sanitizedAddress,
+          amount: parseFloat(sanitizedAmount),
+          currency: 'XLM',
+          status: 'created',
+          contractAddress: result.transactionHash,
+          transactionHash: result.transactionHash,
+          createdAt: new Date(),
+          deadline: deadlineDate,
+          metadata: sanitizedTitle,
+        });
+        
+        toast.success(
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4" />
+              <span>Escrow created successfully!</span>
+            </div>
+            <p className="text-sm">Project: "{sanitizedTitle}"</p>
+            {result.transactionHash && (
+              <Link
+                href={`https://testnet.stellarchain.io/tx/${result.transactionHash}`}
+                target="_blank"
+                className="text-sm text-blue-600 hover:underline"
+              >
+                View on Explorer
+              </Link>
+            )}
+          </div>
+        );
+        setProjectTitle('');
+        setFreelancerAddress('');
+        setAmount('');
+      } else {
+        // Contract not deployed - create local escrow
+        if (result.errorCode === 'CONTRACT_NOT_DEPLOYED') {
+          toast.info(
+            <div className="flex items-start gap-2">
+              <Info className="h-4 w-4 mt-0.5" />
+              <div className="flex flex-col gap-1">
+                <span>Contract not deployed yet. Escrow created in demo mode.</span>
+                <span className="text-xs text-gray-600">To enable full functionality, deploy the escrow contract following the deployment guide.</span>
+              </div>
+            </div>
+          );
+          
+          // Store escrow in Zustand (demo mode)
+          addEscrow({
+            id: newEscrowId,
+            title: sanitizedTitle,
+            client: publicKey,
+            freelancer: sanitizedAddress,
+            amount: parseFloat(sanitizedAmount),
+            currency: 'XLM',
+            status: 'created',
+            createdAt: new Date(),
+            deadline: deadlineDate,
+            metadata: sanitizedTitle,
+          });
+          
+          setEscrowId(newEscrowId);
+          
+          toast.success(
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4" />
+                <span>Demo Escrow created!</span>
+              </div>
+              <p className="text-sm">Project: "{sanitizedTitle}"</p>
+              <p className="text-xs text-gray-600">Escrow saved locally. Navigate to "Escrows" tab to view it.</p>
+            </div>
+          );
+          setProjectTitle('');
+          setFreelancerAddress('');
+          setAmount('');
+        } else {
+          toast.error(
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" />
+              <span>{result.error || 'Escrow creation failed'}</span>
+            </div>
+          );
+        }
+      }
     } catch (error: any) {
       console.error('Escrow creation failed:', error);
-      toast.error(error.message || 'Escrow creation failed');
+      toast.error(
+        <div className="flex items-center gap-2">
+          <AlertCircle className="h-4 w-4" />
+          <span>{error.message || 'Escrow creation failed'}</span>
+        </div>
+      );
     } finally {
       setLoading(false);
     }
@@ -67,6 +189,17 @@ export function CreateEscrowForm() {
 
   return (
     <div className="space-y-4">
+      {/* Info Banner */}
+      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="flex items-start gap-2">
+          <Info className="h-4 w-4 text-blue-600 mt-0.5" />
+          <p className="text-sm text-blue-800">
+            Create an escrow to securely hold funds for your freelance project. 
+            Funds are released only when you approve the work.
+          </p>
+        </div>
+      </div>
+
       <div className="space-y-2">
         <Label htmlFor="project-title">Project Title</Label>
         <Input
@@ -103,6 +236,22 @@ export function CreateEscrowForm() {
         />
       </div>
 
+      <div className="space-y-2">
+        <Label htmlFor="deadline">Deadline (Days)</Label>
+        <Input
+          id="deadline"
+          type="number"
+          placeholder="7"
+          value={deadline}
+          onChange={(e) => setDeadline(e.target.value)}
+          disabled={!isConnected || loading}
+          min="1"
+        />
+        <p className="text-xs text-gray-500">
+          If not released or refunded by this time, freelancer can automatically claim funds.
+        </p>
+      </div>
+
       <Button
         onClick={createEscrow}
         disabled={!isConnected || loading || !projectTitle || !freelancerAddress || !amount}
@@ -110,6 +259,25 @@ export function CreateEscrowForm() {
       >
         {loading ? 'Creating Escrow...' : 'Create Escrow'}
       </Button>
+
+      {/* Success Display */}
+      {escrowId && (
+        <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-green-900">Escrow Created Successfully</p>
+              <p className="text-xs text-green-700 mt-1 font-mono">
+                Escrow ID: {escrowId}
+              </p>
+              <div className="mt-2 text-xs text-green-700 space-y-1">
+                <p>• Navigate to "Escrows" tab to view your escrow</p>
+                <p>• Funds will be held securely until work is completed</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
